@@ -12,8 +12,8 @@ import dev.kord.common.entity.UserFlags
 import dev.kord.common.entity.optional.Optional
 import dev.kord.core.entity.Asset
 import dev.kord.core.entity.Member
-import kotlinx.datetime.Instant
 import kotlin.contracts.contract
+import kotlin.time.Instant
 
 /**
  * Represents the difference between two Kord [Member] objects. This includes everything from [UserDelta].

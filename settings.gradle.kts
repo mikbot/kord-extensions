@@ -18,5 +18,5 @@ include("modules:integrations:pluralkit")
 include("modules:web:web-core:web-backend")
 include("modules:web:web-core:web-frontend")
 
-include("test-bot")
+//include("test-bot")
 include("token-parser")

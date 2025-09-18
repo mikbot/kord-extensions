@@ -17,8 +17,12 @@ import dev.kord.core.entity.Role
 import dev.kord.rest.builder.member.MemberModifyBuilder
 import dev.kordex.core.annotations.DoNotChain
 import kotlinx.coroutines.flow.toList
-import kotlinx.datetime.*
+import kotlinx.datetime.DateTimePeriod
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.plus
+import kotlin.time.Clock
 import kotlin.time.Duration
+import kotlin.time.Instant
 
 /** A more sensible name than `communicationDisabledUntil`. **/
 public val Member.timeoutUntil: Instant?
