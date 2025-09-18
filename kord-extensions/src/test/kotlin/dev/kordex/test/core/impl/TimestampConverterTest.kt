@@ -10,9 +10,10 @@ package dev.kordex.test.core.impl
 
 import dev.kordex.core.commands.converters.impl.TimestampConverter
 import dev.kordex.core.time.TimestampType
-import kotlinx.datetime.Instant
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
+import kotlin.time.Instant
 
 internal class TimestampConverterTest {
 

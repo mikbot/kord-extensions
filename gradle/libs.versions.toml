@@ -1,36 +1,36 @@
 [versions]
 detekt = "1.23.8"  # Note: Must update plugin versions in buildSrc/build.gradle.kts
-dokka = "1.9.20"  # Note: Must update plugin versions in buildSrc/build.gradle.kts
-kotlin = "2.1.21"  # Note: Must update plugin versions in buildSrc/build.gradle.kts
+dokka = "2.0.0"  # Note: Must update plugin versions in buildSrc/build.gradle.kts
+kotlin = "2.2.20"  # Note: Must update plugin versions in buildSrc/build.gradle.kts
 
-commons-validator = "1.9.0"
+commons-validator = "1.10.0"
 data-collector-api = "1.0.2-SNAPSHOT"
-groovy = "3.0.24"
+groovy = "3.0.25"
 icu4j = "77.1"
 jansi = "2.4.2"
-jemoji = "1.7.3"
-jsoup = "1.20.1"
-junit = "5.12.2"
-kaml = "0.78.0"
-koin = "4.0.4"
-kord = "0.16.0-SNAPSHOT"
-ksoup = "0.5.0"
-ksp = "2.1.21-2.0.1"
-ktor = "3.0.3"
-kx-coro = "1.9.0"
-kx-ser = "1.8.1"
+jemoji = "1.7.4"
+jsoup = "1.21.2"
+junit = "5.13.4"
+kaml = "0.96.0"
+koin = "4.1.1"
+kord = "0.17.0-SNAPSHOT"
+ksoup = "0.6.0"
+ksp = "2.2.20-2.0.3"
+ktor = "3.3.0"
+kx-coro = "1.10.2"
+kx-ser = "1.9.0"
 linkie = "1.0.121"
 logback = "1.5.18"
 logback-groovy = "1.14.5"
-logging = "7.0.7"
-mongodb = "5.5.0"
-oshi = "6.8.1"
+logging = "7.0.13"
+mongodb = "5.6.0"
+oshi = "6.8.3"
 pf4j = "3.13.0"
-sentry = "8.13.0"
+sentry = "8.21.1"
 slf4j = "2.0.17"
 time4j-base = "5.9.4"
 time4j-tzdata = "5.0-2024a"
-toml = "0.4.0"
+toml = "0.5.0"
 
 [libraries]
 commons-validator = { module = "commons-validator:commons-validator", version.ref = "commons-validator" }
@@ -90,6 +90,12 @@ slf4j = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 time4j-base = { module = "net.time4j:time4j-base", version.ref = "time4j-base" }
 time4j-tzdata = { module = "net.time4j:time4j-tzdata", version.ref = "time4j-tzdata" }
 toml = { module = "net.peanuuutz.tomlkt:tomlkt", version.ref = "toml" }
+
+kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+kotlin-serialization-gradle-plugin = { module = "org.jetbrains.kotlin.plugin.serialization:org.jetbrains.kotlin.plugin.serialization.gradle.plugin", version.ref = "kotlin" }
+
+[plugins]
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 
 [bundles]
 commons = ["commons-validator"]

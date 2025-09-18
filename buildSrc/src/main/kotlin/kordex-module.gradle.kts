@@ -56,7 +56,7 @@ repositories {
 
 	maven {
 		name = "Kord Snapshots"
-		url = uri("https://repo.kord.dev/snapshots")
+		url = uri("https://snapshots.kord.dev/")
 	}
 }
 
@@ -90,6 +90,10 @@ tasks {
 
 	kotlin {
 		explicitApi()
+
+		compilerOptions {
+			optIn.addAll("dev.kordex.core.annotations.InternalAPI", "kotlin.time.ExperimentalTime")
+		}
 	}
 
 	jar {

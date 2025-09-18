@@ -4,7 +4,7 @@ buildscript {
 	repositories {
 		maven {
 			name = "Kord Snapshots"
-			url = uri("https://repo.kord.dev/snapshots")
+			url = uri("https://snapshots.kord.dev/")
 		}
 	}
 }
@@ -57,7 +57,7 @@ repositories {
 
 	maven {
 		name = "Kord Snapshots"
-		url = uri("https://repo.kord.dev/snapshots")
+		url = uri("https://snapshots.kord.dev")
 	}
 }
 

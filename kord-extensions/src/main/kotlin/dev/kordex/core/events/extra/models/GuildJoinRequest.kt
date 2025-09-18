@@ -10,9 +10,9 @@ package dev.kordex.core.events.extra.models
 
 import dev.kord.common.entity.DiscordUser
 import dev.kord.common.entity.Snowflake
-import kotlinx.datetime.Instant
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlin.time.Instant
 
 @Serializable
 public data class GuildJoinRequest(

@@ -9,7 +9,7 @@
 package dev.kordex.core.time
 
 import kotlinx.datetime.DateTimeUnit
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 /**
  * Format the given `Instant` to Discord's automatically-formatted timestamp format. This will return a String that

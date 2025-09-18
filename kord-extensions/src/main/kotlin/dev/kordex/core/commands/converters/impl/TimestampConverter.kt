@@ -26,7 +26,7 @@ import dev.kordex.core.i18n.withContext
 import dev.kordex.core.time.TimestampType
 import dev.kordex.core.time.toDiscord
 import dev.kordex.parser.StringParser
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 private const val TIMESTAMP_PREFIX = "<t:"
 private const val TIMESTAMP_SUFFIX = ">"

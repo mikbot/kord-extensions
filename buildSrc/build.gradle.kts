@@ -1,7 +1,7 @@
 plugins {
 	`kotlin-dsl`
 
-	kotlin("plugin.serialization") version "1.9.24"
+	alias(libs.plugins.kotlin.serialization)
 }
 
 repositories {
@@ -10,11 +10,11 @@ repositories {
 }
 
 dependencies {
-	implementation(kotlin("gradle-plugin", version = "2.1.21"))
-	implementation(kotlin("serialization", version = "2.1.21"))
+	implementation(libs.kotlin.gradle.plugin)
+	implementation(libs.kotlin.serialization.gradle.plugin)
 
 	implementation("com.github.ben-manes", "gradle-versions-plugin", "0.51.0")
-	implementation("com.google.devtools.ksp", "com.google.devtools.ksp.gradle.plugin", "2.1.21-2.0.1")
+	implementation("com.google.devtools.ksp", "com.google.devtools.ksp.gradle.plugin", "2.2.20-2.0.3")
 	implementation("com.hanggrian", "kotlinpoet-dsl", "0.2")
 	implementation("com.squareup", "kotlinpoet", "1.18.1")
 	implementation("dev.yumi", "yumi-gradle-licenser", "1.2.0")
@@ -23,7 +23,7 @@ dependencies {
 	implementation("org.sonarqube:org.sonarqube.gradle.plugin:6.2.0.5505")
 	implementation("org.jetbrains.kotlinx.kover:org.jetbrains.kotlinx.kover.gradle.plugin:0.9.1")
 
-	implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+	implementation(libs.kx.ser.json)
 
 	implementation(gradleApi())
 	implementation(localGroovy())
