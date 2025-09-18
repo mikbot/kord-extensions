@@ -188,7 +188,7 @@ public open class DefaultApplicationCommandRegistry : ApplicationCommandRegistry
 
 		val builder: suspend MultiApplicationCommandBuilder.() -> Unit = {
 			toCreate.forEach {
-				val (name, nameLocalizations) = it.localizedName
+				val (name, nameLocalizations) = it.localisedName
 
 				logger.trace { "Adding/updating ${it.type.name} command: $name" }
 
@@ -206,7 +206,7 @@ public open class DefaultApplicationCommandRegistry : ApplicationCommandRegistry
 					}
 
 					is SlashCommand<*, *, *> -> {
-						val (description, descriptionLocalizations) = it.localizedDescription
+						val (description, descriptionLocalizations) = it.localisedDescription
 
 						input(name, description) {
 							this.nameLocalizations = nameLocalizations
@@ -397,7 +397,8 @@ public open class DefaultApplicationCommandRegistry : ApplicationCommandRegistry
 
 		option ?: return logger.trace { "Autocomplete event for command $command doesn't have a focused option." }
 
-		val arguments = command.arguments!!()
+		val arguments = command.cachedArguments
+			?: return logger.trace { "Command $command doesn't have a cached arguments object for some reason." }
 
 		val arg = arguments.args.firstOrNull {
 			it.getDefaultTranslatedDisplayName() == option.first

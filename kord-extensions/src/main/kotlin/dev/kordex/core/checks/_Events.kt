@@ -7,6 +7,7 @@
  */
 
 @file:OptIn(KordUnsafe::class, KordExperimental::class)
+@file:Suppress("kotlin:S1479")  // Large when blocks are required unless Kord switches to typed event bases.
 
 package dev.kordex.core.checks
 
@@ -230,6 +231,7 @@ public suspend fun memberFor(event: Event): MemberBehavior? {
 		is InviteCreateEvent -> event.inviterMember
 
 		is MemberJoinEvent -> event.member
+		is MemberLeaveEvent -> event.old
 		is MemberUpdateEvent -> event.member
 		is MessageCreateEvent -> event.member
 

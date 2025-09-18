@@ -1,9 +1,10 @@
+import com.github.gradle.node.pnpm.task.PnpmInstallTask
 import com.github.gradle.node.pnpm.task.PnpmTask
 
 plugins {
 	java
 
-	id("com.github.node-gradle.node") version "7.0.2"
+	id("com.github.node-gradle.node") version "7.1.0"
 	id("dev.yumi.gradle.licenser")
 }
 
@@ -14,34 +15,55 @@ java {
 	targetCompatibility = JavaVersion.VERSION_13
 }
 
-node {
-	version = "20.11.0"
-	download = true
+tasks.withType<PnpmInstallTask>() {
+	doNotTrackState("Working around an apparent bug.")
+}
 
-	workDir = file("${project.projectDir}/.cache/nodejs")
-	npmWorkDir = file("${project.projectDir}/.cache/npm")
+node {
+	version = "24.2.0"
+
+	// CI will have NodeJS preinstalled with caching configured so no need to download it
+	if (System.getenv("CI") == null) {
+		download = true
+
+		workDir = file("${project.projectDir}/.cache/nodejs")
+		npmWorkDir = file("${project.projectDir}/.cache/npm")
+	}
+
 	nodeProjectDir = file(project.projectDir)
 }
 
 val startTask = tasks.register<PnpmTask>("run") {
+	group = "application"
+	description = "Serve the frontend in development mode."
+
 	dependsOn(tasks.pnpmInstall)
 
 	args = listOf("run", "dev")
 }
 
 val lintTask = tasks.register<PnpmTask>("lintFrontend") {
+	group = "verification"
+	description = "Lint the frontend."
+
 	dependsOn(tasks.pnpmInstall)
 
 	args = listOf("run", "lint")
 }
 
 val formatTask = tasks.register<PnpmTask>("formatFrontend") {
+	group = "verification"
+	description = "Reformat the frontend."
+
 	dependsOn(tasks.pnpmInstall)
 
 	args = listOf("run", "format")
 }
 
 val buildTask = tasks.register<PnpmTask>("buildFrontend") {
+	group = "build"
+	description = "Build the frontend."
+
 	dependsOn(tasks.pnpmInstall)
 
 	inputs.dir("$projectDir/public")

@@ -38,6 +38,7 @@ import dev.kordex.core.events.extra.models.GuildJoinRequestUpdate
 import dev.kordex.core.extensions.Extension
 import dev.kordex.core.extensions.impl.HelpExtension
 import dev.kordex.core.extensions.impl.SentryExtension
+import dev.kordex.core.healthcheck.HealthCheckRegistry
 import dev.kordex.core.koin.KordExContext
 import dev.kordex.core.koin.KordExKoinComponent
 import dev.kordex.core.types.Lockable
@@ -53,6 +54,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromJsonElement
 import org.koin.core.component.inject
 import org.koin.dsl.bind
+import java.util.concurrent.Executors
 import kotlin.concurrent.thread
 
 /**
@@ -74,6 +76,21 @@ public open class ExtensibleBot(
 	override var mutex: Mutex? = Mutex()
 	override var locking: Boolean = settings.membersBuilder.lockMemberRequests
 
+	protected var autoCompleteCoroutineThreads: Int = 0
+	protected var interactionCoroutineThreads: Int = 0
+
+	public val autoCompleteCoroutineContext: CoroutineDispatcher =
+		Executors.newFixedThreadPool(settings.autoCompleteContextThreads) { r ->
+			autoCompleteCoroutineThreads++
+			Thread(r, "kordex-autocomplete-${autoCompleteCoroutineThreads - 1}")
+		}.asCoroutineDispatcher()
+
+	public val interactionCoroutineContext: CoroutineDispatcher =
+		Executors.newFixedThreadPool(settings.interactionContextThreads) { r ->
+			interactionCoroutineThreads++
+			Thread(r, "kordex-interactions-${interactionCoroutineThreads - 1}")
+		}.asCoroutineDispatcher()
+
 	/** @suppress Meant for internal use by public inline function. **/
 	public val kordRef: Kord by inject()
 
@@ -88,6 +105,7 @@ public open class ExtensibleBot(
 	public open val extensions: MutableStringKeyedMap<Extension> = mutableMapOf()
 
 	/** @suppress **/
+	@Suppress("kotlin:S6305")  // We have no choice here.
 	public open val eventPublisher: MutableSharedFlow<Any> = MutableSharedFlow()
 
 	/** A [Flow] representing a combined set of Kord events and Kord Extensions events. **/
@@ -140,14 +158,14 @@ public open class ExtensibleBot(
 			logger.debug { "Kord event filter predicate not set." }
 
 			kord.on<Event> {
-				send(this@on)
+				sendKord(this@on)
 			}
 		} else {
 			logger.debug { "Kord event filter predicate set, filtering Kord events." }
 
 			kord.on<Event> {
 				if (settings.kordEventFilter!!(this@on)) {
-					send(this@on)
+					sendKord(this@on)
 				}
 			}
 		}
@@ -170,6 +188,8 @@ public open class ExtensibleBot(
 			logger.warn(e) { "Unable to add shutdown hook." }
 		}
 
+		getKoin().get<HealthCheckRegistry>().start()
+
 		getKoin().get<Kord>().login {
 			this.presence(settings.presenceBuilder)
 			this.intents = Intents(settings.intentsBuilder!!)
@@ -185,6 +205,8 @@ public open class ExtensibleBot(
 	 **/
 	public open suspend fun stop() {
 		dataCollector.stop()
+		autoCompleteCoroutineContext.cancel()
+		interactionCoroutineContext.cancel()
 
 		getKoin().get<Kord>().logout()
 	}
@@ -215,6 +237,10 @@ public open class ExtensibleBot(
 		}
 
 		dataCollector.stop()
+		autoCompleteCoroutineContext.cancel()
+		interactionCoroutineContext.cancel()
+
+		getKoin().get<HealthCheckRegistry>().shutdown()
 		getKoin().get<Kord>().shutdown()
 
 		KordExContext.stopKoin()
@@ -275,8 +301,8 @@ public open class ExtensibleBot(
 						GuildJoinRequestUpdateEvent(data)
 					}
 
-					else -> null
-				} ?: return@on
+					else -> return@on
+				}
 
 				send(eventObj)
 			} catch (e: Exception) {
@@ -286,30 +312,6 @@ public open class ExtensibleBot(
 
 		on<DisconnectEvent.DiscordCloseEvent> {
 			logger.warn { "Disconnected: $closeCode" }
-		}
-
-		on<ButtonInteractionCreateEvent> {
-			try {
-				getKoin().get<ComponentRegistry>().handle(this)
-			} catch (e: Exception) {
-				logger.error(e) { "Exception thrown while handling button interaction event" }
-			}
-		}
-
-		on<SelectMenuInteractionCreateEvent> {
-			try {
-				getKoin().get<ComponentRegistry>().handle(this)
-			} catch (e: Exception) {
-				logger.error(e) { "Exception thrown while handling select menu interaction event" }
-			}
-		}
-
-		on<ModalSubmitInteractionCreateEvent> {
-			try {
-				getKoin().get<ComponentRegistry>().handle(this)
-			} catch (e: Exception) {
-				logger.error(e) { "Exception thrown while handling modal interaction event" }
-			}
 		}
 
 		if (settings.chatCommandsBuilder.enabled) {
@@ -328,38 +330,6 @@ public open class ExtensibleBot(
 		}
 
 		if (settings.applicationCommandsBuilder.enabled) {
-			on<ChatInputCommandInteractionCreateEvent> {
-				try {
-					getKoin().get<ApplicationCommandRegistry>().handle(this)
-				} catch (e: Exception) {
-					logger.error(e) { "Exception thrown while handling slash command interaction event" }
-				}
-			}
-
-			on<MessageCommandInteractionCreateEvent> {
-				try {
-					getKoin().get<ApplicationCommandRegistry>().handle(this)
-				} catch (e: Exception) {
-					logger.error(e) { "Exception thrown while handling message command interaction event" }
-				}
-			}
-
-			on<UserCommandInteractionCreateEvent> {
-				try {
-					getKoin().get<ApplicationCommandRegistry>().handle(this)
-				} catch (e: Exception) {
-					logger.error(e) { "Exception thrown while handling user command interaction event" }
-				}
-			}
-
-			on<AutoCompleteInteractionCreateEvent> {
-				try {
-					getKoin().get<ApplicationCommandRegistry>().handle(this)
-				} catch (e: Exception) {
-					logger.error(e) { "Exception thrown while handling autocomplete interaction event" }
-				}
-			}
-
 			try {
 				getKoin().get<ApplicationCommandRegistry>().initialRegistration()
 			} catch (e: Exception) {
@@ -373,12 +343,6 @@ public open class ExtensibleBot(
 		}
 
 		if (!initialized) {
-			eventHandlers.forEach { handler ->
-				handler.listenerRegistrationCallable?.invoke() ?: logger.error {
-					"Event handler $handler doesn't have a listener registration callback. This should never happen!"
-				}
-			}
-
 			initialized = true
 		}
 	}
@@ -432,10 +396,104 @@ public open class ExtensibleBot(
 			.launchIn(kordRef)
 
 	/**
-	 * @suppress
+	 * @suppress Internal function used to additionally process all events. Don't call this yourself.
 	 */
-	public suspend inline fun send(event: Event) {
+	@Suppress("TooGenericExceptionCaught")
+	public suspend inline fun publishEvent(event: Event) {
+		when (event) {
+			// General interaction events
+			is ButtonInteractionCreateEvent ->
+				kordRef.launch(interactionCoroutineContext) {
+					try {
+						getKoin().get<ComponentRegistry>().handle(event)
+					} catch (e: Exception) {
+						logger.error(e) { "Exception thrown while handling button interaction event" }
+					}
+				}
+
+			is SelectMenuInteractionCreateEvent ->
+				kordRef.launch(interactionCoroutineContext) {
+					try {
+						getKoin().get<ComponentRegistry>().handle(event)
+					} catch (e: Exception) {
+						logger.error(e) { "Exception thrown while handling select menu interaction event" }
+					}
+				}
+
+			is ModalSubmitInteractionCreateEvent ->
+				kordRef.launch(interactionCoroutineContext) {
+					try {
+						getKoin().get<ComponentRegistry>().handle(event)
+					} catch (e: Exception) {
+						logger.error(e) { "Exception thrown while handling modal interaction event" }
+					}
+				}
+
+			// Interaction command events
+			is ChatInputCommandInteractionCreateEvent ->
+				if (settings.applicationCommandsBuilder.enabled) {
+					kordRef.launch(interactionCoroutineContext) {
+						try {
+							getKoin().get<ApplicationCommandRegistry>().handle(event)
+						} catch (e: Exception) {
+							logger.error(e) { "Exception thrown while handling slash command interaction event" }
+						}
+					}
+				}
+
+			is MessageCommandInteractionCreateEvent ->
+				if (settings.applicationCommandsBuilder.enabled) {
+					kordRef.launch(interactionCoroutineContext) {
+						try {
+							getKoin().get<ApplicationCommandRegistry>().handle(event)
+						} catch (e: Exception) {
+							logger.error(e) { "Exception thrown while handling message command interaction event" }
+						}
+					}
+				}
+
+			is UserCommandInteractionCreateEvent ->
+				if (settings.applicationCommandsBuilder.enabled) {
+					kordRef.launch(interactionCoroutineContext) {
+						try {
+							getKoin().get<ApplicationCommandRegistry>().handle(event)
+						} catch (e: Exception) {
+							logger.error(e) { "Exception thrown while handling user command interaction event" }
+						}
+					}
+				}
+
+			is AutoCompleteInteractionCreateEvent ->
+				if (settings.applicationCommandsBuilder.enabled) {
+					kordRef.launch(autoCompleteCoroutineContext) {
+						try {
+							getKoin().get<ApplicationCommandRegistry>().handle(event)
+						} catch (e: Exception) {
+							logger.error(e) { "Exception thrown while handling autocomplete interaction event" }
+						}
+					}
+				}
+		}
+
 		eventPublisher.emit(event)
+	}
+
+	/**
+	 * @suppress Internal function used to process Kord events. Don't call this yourself.
+	 */
+	protected suspend inline fun sendKord(event: Event) {
+		publishEvent(event)
+	}
+
+	/**
+	 * Submit an event, triggering any relevant event handlers.
+	 *
+	 * Events submitted using this function are filtered by [ExtensibleBotBuilder.kordEventFilter].
+	 */
+	public suspend inline fun send(event: Event, filter: Boolean = true) {
+		if (!filter || settings.kordExEventFilter?.invoke(event) != false) {
+			publishEvent(event)
+		}
 	}
 
 	/**
@@ -560,15 +618,16 @@ public open class ExtensibleBot(
 	public inline fun <reified T : Event> addEventHandler(handler: EventHandler<T>) {
 		if (eventHandlers.contains(handler)) {
 			throw EventHandlerRegistrationException(
+				handler,
 				"Event handler already registered in '${handler.extension.name}' extension."
 			)
 		}
 
-		if (initialized) {
+// 		if (initialized) {
 			handler.listenerRegistrationCallable?.invoke() ?: error(
 				"Event handler $handler does not have a listener registration callback. This should never happen!"
 			)
-		}
+// 		}
 
 		eventHandlers.add(handler)
 	}
@@ -584,10 +643,18 @@ public open class ExtensibleBot(
 	 * @param handler The event handler to be registered.
 	 * @throws EventHandlerRegistrationException Thrown if the event handler could not be registered.
 	 */
+	@Suppress("TooGenericExceptionCaught")
 	@Throws(EventHandlerRegistrationException::class)
 	public inline fun <reified T : Event> registerListenerForHandler(handler: EventHandler<T>): Job {
 		return on<T>(scope = handler.coroutineScope) {
-			handler.call(this)
+			try {
+				handler.call(this)
+			} catch (e: Exception) {
+				logger.error(e) {
+					"Exception thrown by event handler in '${handler.extension.name}' extension - " +
+						"Event type is ${T::class.simpleName} (from ${T::class.java.packageName}); handler is $handler"
+				}
+			}
 		}
 	}
 

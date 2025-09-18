@@ -6,11 +6,16 @@
  * Any redistribution must include the specific provision above.
  */
 
+// We suppress this because the MessageFormatter isn't deprecated, it is new!
+@file:Suppress("kotlin:S1874", "DEPRECATION")
+
 package dev.kordex.core.i18n
 
+import com.ibm.icu.message2.MessageFormatter
 import com.ibm.icu.text.MessageFormat
 import dev.kordex.core.builders.ExtensibleBotBuilder
 import dev.kordex.core.i18n.types.Key
+import dev.kordex.core.i18n.types.MessageFormatVersion
 import dev.kordex.core.koin.KordExKoinComponent
 import dev.kordex.core.plugins.PluginManager
 import io.github.oshai.kotlinlogging.KLogger
@@ -36,6 +41,7 @@ public open class ResourceBundleTranslations(
 ) : TranslationsProvider(defaultLocaleBuilder) {
 	private val logger: KLogger = KotlinLogging.logger { }
 
+	private val botSettings: ExtensibleBotBuilder by inject()
 	private val pluginManager: PluginManager by inject()
 
 	private val bundles: MutableMap<Pair<String, Locale>, ResourceBundle> = mutableMapOf()
@@ -199,27 +205,58 @@ public open class ResourceBundleTranslations(
 		}
 	}
 
+	@Suppress("DEPRECATION")
 	override fun translate(
 		key: Key,
 		replacements: Array<Any?>,
 	): String {
 		val locale = key.locale
+			?: botSettings.i18nBuilder.defaultLocale
 
 		val string = getTranslatedString(key)
-		val formatter = MessageFormat(string, locale)
 
-		return formatter.format(replacements)
+		val formattingVersion = key.bundle?.formattingVersion
+			?: MessageFormatVersion.ONE
+
+		return if (formattingVersion == MessageFormatVersion.ONE) {
+			MessageFormat(string, locale)
+				.format(replacements)
+		} else {
+			MessageFormatter.builder().apply {
+				setLocale(locale)
+				setPattern(string)
+			}.build()
+				.formatToString(
+					replacements.mapIndexed { index, value ->
+						index.toString() to value
+					}.toMap()
+				)
+		}
 	}
 
+	@Suppress("DEPRECATION")
 	override fun translateNamed(
 		key: Key,
 		replacements: Map<String, Any?>,
 	): String {
 		val locale = key.locale
-		val string = getTranslatedString(key)
-		val formatter = MessageFormat(string, locale)
+			?: botSettings.i18nBuilder.defaultLocale
 
-		return formatter.format(replacements)
+		val string = getTranslatedString(key)
+
+		val formattingVersion = key.bundle?.formattingVersion
+			?: MessageFormatVersion.ONE
+
+		return if (formattingVersion == MessageFormatVersion.ONE) {
+			MessageFormat(string, locale)
+				.format(replacements)
+		} else {
+			MessageFormatter.builder().apply {
+				setLocale(locale)
+				setPattern(string)
+			}.build()
+				.formatToString(replacements)
+		}
 	}
 
 	private fun ResourceBundle.getStringOrNull(key: String): String? {

@@ -12,6 +12,7 @@ import dev.kord.core.Kord
 import dev.kord.core.event.Event
 import dev.kord.gateway.Intent
 import dev.kordex.core.ExtensibleBot
+import dev.kordex.core.annotations.InternalAPI
 import dev.kordex.core.checks.types.ChatCommandCheck
 import dev.kordex.core.checks.types.MessageCommandCheck
 import dev.kordex.core.checks.types.SlashCommandCheck
@@ -60,6 +61,14 @@ public abstract class Extension : KordExKoinComponent {
 	 * be used to refer to your specific extension after it's been registered.
 	 */
 	public abstract val name: String
+
+	/** @suppress API only meant to be used by KordEx and modules that extend the extension system. **/
+	@InternalAPI
+	public val unloadCallbacks: MutableList<() -> Unit> = mutableListOf()
+
+	/** @suppress API only meant to be used by KordEx and modules that extend the extension system. **/
+	@InternalAPI
+	public val extraData: MutableMap<String, Any> = mutableMapOf()
 
 	/**
 	 * The current loading/unloading state of the extension.
@@ -181,7 +190,7 @@ public abstract class Extension : KordExKoinComponent {
 
 	/** Update this extension's state, firing the extension state change event. **/
 	public open suspend fun setState(state: ExtensionState) {
-		bot.send(ExtensionStateEvent(this, state))
+		bot.send(ExtensionStateEvent(this, state), false)
 
 		this.state = state
 	}
@@ -205,10 +214,20 @@ public abstract class Extension : KordExKoinComponent {
 	 *
 	 * @suppress Internal function
 	 */
+	@OptIn(InternalAPI::class)
+	@Suppress("TooGenericExceptionCaught")
 	public open suspend fun doUnload() {
 		var error: Throwable? = null
 
 		this.setState(ExtensionState.UNLOADING)
+
+		unloadCallbacks.forEach {
+			try {
+				it()
+			} catch (e: Exception) {
+				logger.warn(e) { "Exception thrown by unloading callback $it" }
+			}
+		}
 
 		@Suppress("TooGenericExceptionCaught")
 		try {
@@ -228,8 +247,16 @@ public abstract class Extension : KordExKoinComponent {
 			chatCommandRegistry.remove(command)
 		}
 
+		for (command in messageCommands + slashCommands + userCommands) {
+			applicationCommandRegistry.unregisterGeneric(command, delete = false)
+		}
+
 		eventHandlers.clear()
 		chatCommands.clear()
+
+		messageCommands.clear()
+		slashCommands.clear()
+		userCommands.clear()
 
 		if (error != null) {
 			throw error

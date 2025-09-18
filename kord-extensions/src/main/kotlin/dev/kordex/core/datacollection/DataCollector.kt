@@ -94,6 +94,12 @@ public class DataCollector(public val level: DataCollection) : KordExKoinCompone
 	@OptIn(InternalAPI::class)
 	@Suppress("TooGenericExceptionCaught")
 	internal suspend fun collect() {
+		/*
+		 * If you're maintaining a fork of Kord Extensions, add the name of your fork below.
+		 * Fork names should be lowered-kebab-case, ideally containing only lower-case letters, numbers, and dashes.
+		 */
+		val fork: String? = null  // "fork-name"
+
 		if (!::applicationInfo.isInitialized) {
 			applicationInfo = bot.kordRef.getApplicationInfo()
 		}
@@ -107,13 +113,14 @@ public class DataCollector(public val level: DataCollection) : KordExKoinCompone
 				is DataCollection.Minimal ->
 					entity = MinimalDataEntity(
 						id = lastUUID,
+						fork = fork,
 
 						devMode = settings.devMode,
-						kordExVersion = KORDEX_VERSION ?: "Unknown",
-						kordVersion = KORD_VERSION ?: "Unknown",
+						kordExVersion = KORDEX_VERSION,
+						kordVersion = KORD_VERSION,
 
 						modules = KORDEX_MODULES.associateWith {
-							KORDEX_VERSION ?: "Unknown"
+							KORDEX_VERSION
 						},
 						fork = FORK_NAME
 					)
@@ -121,13 +128,14 @@ public class DataCollector(public val level: DataCollection) : KordExKoinCompone
 				is DataCollection.Standard ->
 					entity = StandardDataEntity(
 						id = lastUUID,
+						fork = fork,
 
 						devMode = settings.devMode,
-						kordExVersion = KORDEX_VERSION ?: "Unknown",
-						kordVersion = KORD_VERSION ?: "Unknown",
+						kordExVersion = KORDEX_VERSION,
+						kordVersion = KORD_VERSION,
 
 						modules = KORDEX_MODULES.associateWith {
-							KORDEX_VERSION ?: "Unknown"
+							KORDEX_VERSION
 						},
 
 						botId = bot.kordRef.selfId.toString(),
@@ -179,13 +187,14 @@ public class DataCollector(public val level: DataCollection) : KordExKoinCompone
 
 					entity = ExtraDataEntity(
 						id = lastUUID,
+						fork = fork,
 
 						devMode = settings.devMode,
-						kordExVersion = KORDEX_VERSION ?: "Unknown",
-						kordVersion = KORD_VERSION ?: "Unknown",
+						kordExVersion = KORDEX_VERSION,
+						kordVersion = KORD_VERSION,
 
 						modules = KORDEX_MODULES.associateWith {
-							KORDEX_VERSION ?: "Unknown"
+							KORDEX_VERSION
 						},
 
 						botId = bot.kordRef.selfId.toString(),

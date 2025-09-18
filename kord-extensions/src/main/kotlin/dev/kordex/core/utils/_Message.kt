@@ -40,7 +40,6 @@ import kotlinx.coroutines.launch
 private val logger = KotlinLogging.logger {}
 
 private const val DELETE_DELAY = 1000L * 30L  // 30 seconds
-private const val DISCORD_CHANNEL_URI = "https://discord.com/channels"
 
 /**
  * Deletes a message, catching and ignoring an HTTP 404 (Not Found) exception.
@@ -248,7 +247,7 @@ public suspend fun Message.respond(
  * @return A clickable URL to jump to this message.
  */
 public fun Message.getJumpUrl(): String =
-	"$DISCORD_CHANNEL_URI/${data.guildId.value?.value ?: "@me"}/${channelId.value}/${id.value}"
+	"$DISCORD_CHANNEL_URI/${data.guildId.value?.value ?: DM_CHANNEL_PREFIX}/${channelId.value}/${id.value}"
 
 /**
  * Generate the jump URL for this message.
@@ -256,7 +255,7 @@ public fun Message.getJumpUrl(): String =
  * @return A clickable URL to jump to this message.
  */
 public fun DiscordPartialMessage.getJumpUrl(): String =
-	"$DISCORD_CHANNEL_URI/${guildId.value?.value ?: "@me"}/${channelId.value}/${id.value}"
+	"$DISCORD_CHANNEL_URI/${guildId.value?.value ?: DM_CHANNEL_PREFIX}/${channelId.value}/${id.value}"
 
 /**
  * Check that this message happened in either the given channel or a DM, or that the author is at least a given role.
@@ -511,4 +510,37 @@ public suspend fun CommandContext.waitForResponse(
 	}
 
 	return event?.message
+}
+
+/**
+ * Attempt to retrieve the message that the current message is in reply to, if any.
+ *
+ * In some situations, such as when dealing with a cross-posted (forwarded) message, Discord may return an HTTP 403.
+ * This function returns `null` in those situations.
+ *
+ * This function also returns `null` when the messages come from different channels, to avoid cross-posted messages.
+ *
+ * @return Corresponding [Message] object if found, accessible, and correct; `null` otherwise.
+ */
+public suspend fun Message.repliedMessageOrNull(): Message? {
+	val logger = KotlinLogging.logger("dev.kordex.core.utils.repliedMessageOrNull")
+	val reference = messageReference?.message
+
+	if (reference == null) {
+		return null
+	}
+
+	try {
+		val newMessage = reference.asMessageOrNull()
+
+		if (newMessage == null || newMessage.channelId != channelId) {
+			return null
+		}
+
+		return newMessage
+	} catch (e: RestRequestException) {
+		logger.debug(e) { "Failed to retrieve referenced message (${reference.id}) for reply-message ($id)" }
+
+		return null
+	}
 }

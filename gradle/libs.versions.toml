@@ -1,32 +1,33 @@
 [versions]
-detekt = "1.23.7"  # Note: Must update plugin versions in buildSrc/build.gradle.kts
+detekt = "1.23.8"  # Note: Must update plugin versions in buildSrc/build.gradle.kts
 dokka = "1.9.20"  # Note: Must update plugin versions in buildSrc/build.gradle.kts
-kotlin = "2.0.21"  # Note: Must update plugin versions in buildSrc/build.gradle.kts
+kotlin = "2.1.21"  # Note: Must update plugin versions in buildSrc/build.gradle.kts
 
 commons-validator = "1.9.0"
 data-collector-api = "1.0.2-SNAPSHOT"
-groovy = "3.0.22"
-icu4j = "76.1"
-jansi = "2.4.1"
-jemoji = "1.5.2"
-jsoup = "1.18.1"
-junit = "5.11.3"
-kaml = "0.61.0"
-koin = "4.0.0"
-kord = "mikbot-SNAPSHOT"
-ksp = "2.0.21-1.0.26"
-ktor = "3.0.0"
+groovy = "3.0.24"
+icu4j = "77.1"
+jansi = "2.4.2"
+jemoji = "1.7.3"
+jsoup = "1.20.1"
+junit = "5.12.2"
+kaml = "0.78.0"
+koin = "4.0.4"
+kord = "0.16.0-SNAPSHOT"
+ksoup = "0.5.0"
+ksp = "2.1.21-2.0.1"
+ktor = "3.0.3"
 kx-coro = "1.9.0"
-kx-ser = "1.7.3"
+kx-ser = "1.8.1"
 linkie = "1.0.121"
-logback = "1.5.12"
+logback = "1.5.18"
 logback-groovy = "1.14.5"
-logging = "7.0.0"
-mongodb = "5.2.0"
-oshi = "6.6.5"
-pf4j = "3.12.1"
-sentry = "7.16.0"
-slf4j = "2.0.16"
+logging = "7.0.7"
+mongodb = "5.5.0"
+oshi = "6.8.1"
+pf4j = "3.13.0"
+sentry = "8.13.0"
+slf4j = "2.0.17"
 time4j-base = "5.9.4"
 time4j-tzdata = "5.0-2024a"
 toml = "0.4.0"
@@ -52,6 +53,10 @@ kord = { module = "dev.kord:kord-core-voice", version.ref = "kord" }
 
 kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib-jdk8" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
+
+ksoup-entities = { module = "com.mohamedrejeb.ksoup:ksoup-entities", version.ref = "ksoup" }
+ksoup-html = { module = "com.mohamedrejeb.ksoup:ksoup-html", version.ref = "ksoup" }
+
 ksp = { module = "com.google.devtools.ksp:symbol-processing-api", version.ref = "ksp" }
 
 ktor-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktor" }
@@ -62,6 +67,7 @@ ktor-server-plugin-auth = { module = "io.ktor:ktor-server-auth", version.ref = "
 ktor-server-plugin-content-negotiation = { module = "io.ktor:ktor-server-content-negotiation", version.ref = "ktor" }
 ktor-server-plugin-cors = { module = "io.ktor:ktor-server-cors", version.ref = "ktor" }
 ktor-server-plugin-forwarded-header = { module = "io.ktor:ktor-server-forwarded-header", version.ref = "ktor" }
+ktor-server-plugin-resources = { module = "io.ktor:ktor-server-resources", version.ref = "ktor" }
 ktor-server-plugin-status-pages = { module = "io.ktor:ktor-server-status-pages", version.ref = "ktor" }
 ktor-server-plugin-websockets = { module = "io.ktor:ktor-server-websockets", version.ref = "ktor" }
 
@@ -96,6 +102,7 @@ ktor-server = [
 	"ktor-server-plugin-content-negotiation",
 	"ktor-server-plugin-cors",
 	"ktor-server-plugin-forwarded-header",
+	"ktor-server-plugin-resources",
 	"ktor-server-plugin-status-pages",
 	"ktor-server-plugin-websockets",
 	"ktor-server-plugin-kx-json",

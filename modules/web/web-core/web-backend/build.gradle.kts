@@ -1,6 +1,6 @@
 plugins {
 	`kordex-module`
-//	`published-module`
+	`published-module`
 
 	kotlin("plugin.serialization")
 
@@ -9,10 +9,10 @@ plugins {
 
 group = "dev.kordex.modules"
 
-//metadata {
-//	name = "KordEx Extra: Web"
-//	description = "KordEx extra module that provides a web interface and APIs for working with it"
-//}
+metadata {
+	name = "KordEx Web: Core Module"
+	description = "KordEx module that provides a web interface, and a full set of APIs for working with it"
+}
 
 dokkaModule {
 	moduleName = "Kord Extensions: Web Interface"
@@ -20,8 +20,8 @@ dokkaModule {
 
 repositories {
 	maven {
-		name = "Sonatype Snapshots"
-		url = uri("https://oss.sonatype.org/content/repositories/snapshots")
+		name = "Kord Snapshots"
+		url = uri("https://repo.kord.dev/snapshots")
 	}
 }
 
@@ -34,11 +34,11 @@ dependencies {
 
 	implementation(libs.ktor.logging)
 
-	implementation(libs.bundles.ktor.server)
+	api(libs.bundles.ktor.server)
 
 	implementation(project(":kord-extensions"))
 
-	implementation(project(":modules:web:web-core:web-frontend"))
+	compileOnly(project(":modules:web:web-core:web-frontend"))
 	shadow(project(":modules:web:web-core:web-frontend"))
 }
 

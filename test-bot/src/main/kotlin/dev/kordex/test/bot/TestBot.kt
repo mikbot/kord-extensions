@@ -52,7 +52,7 @@ public suspend fun main() {
 			ephemeral = false
 
 			general {
-				message { locale ->
+				message {
 					embed {
 						color = DISCORD_BLURPLE
 						title = "Test Bot"
@@ -160,7 +160,9 @@ public suspend fun main() {
  			}
 
 			add(::ArgumentTestExtension)
+			add(::BenchmarkExtension)
 			add(::I18nTestExtension)
+			add(::MiscExtension)
 			add(::ModalTestExtension)
 			add(::PaginatorTestExtension)
 			add(::PKTestExtension)

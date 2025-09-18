@@ -96,7 +96,7 @@ public open class EventHandler<T : Event>(
 	@Throws(InvalidEventHandlerException::class)
 	public fun validate() {
 		if (!::body.isInitialized) {
-			throw InvalidEventHandlerException("No event handler action given.")
+			throw InvalidEventHandlerException(this, "No event handler action given.")
 		}
 	}
 
@@ -122,14 +122,16 @@ public open class EventHandler<T : Event>(
 	 *
 	 * @param checks Checks to apply to this event handler.
 	 */
-	public fun check(vararg checks: CheckWithCache<T>): Unit = checks.forEach { checkList.add(it) }
+	public fun check(vararg checks: CheckWithCache<T>): Boolean =
+		checkList.addAll(checks)
 
 	/**
 	 * Overloaded check function to allow for DSL syntax.
 	 *
 	 * @param check Check to apply to this event handler.
 	 */
-	public fun check(check: CheckWithCache<T>): Boolean = checkList.add(check)
+	public fun check(check: CheckWithCache<T>): Boolean =
+		checkList.add(check)
 
 	// endregion
 

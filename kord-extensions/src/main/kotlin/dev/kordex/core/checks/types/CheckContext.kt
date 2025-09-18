@@ -208,12 +208,10 @@ public open class CheckContext<out T : Event>(
 	 */
 	@Throws(DiscordRelayedException::class)
 	public fun throwIfFailedWithMessage() {
-		if (passed.not() && message != null) {
-			throw DiscordRelayedException(
-				errorResponseKey
-					.withLocale(locale)
-					.withOrdinalPlaceholders(message)
-			)
+		val key = getMessageKey()
+
+		if (key != null) {
+			throw DiscordRelayedException(key)
 		}
 	}
 
@@ -225,7 +223,7 @@ public open class CheckContext<out T : Event>(
 	 * Get a pre-translation [Key] representing the current check failure message,
 	 * if the check has failed, and a message was set.
 	 */
-	public fun getMessageKey(): Key? =
+	public open fun getMessageKey(): Key? =
 		if (passed.not() && message != null) {
 			errorResponseKey
 				.withLocale(locale)

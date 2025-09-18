@@ -5,12 +5,22 @@ on:
     tags:
       - "v*"
 
+concurrency:
+  group: "kordex-${{ github.workflow }}"
+  cancel-in-progress: true
+
 jobs:
   release:
     runs-on: ubuntu-latest
+    if: github.repository == 'Kord-Extensions/kord-extensions'
+
+    env:
+      GPG_KEY_NAME: BFAAD5D6093EF5E62BC9A16A10DB8C6B4AE61C2F
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -20,17 +30,25 @@ jobs:
           distribution: temurin
 
       - name: Set up Kotlin
-        uses: fwilhe2/setup-kotlin@main
+        uses: fwilhe2/setup-kotlin@1694fbd49c38ab354ff58e249fe2d73d74a1c6eb # v1.2
+
+      - name: SonarQube (Cache)
+        uses: actions/cache@v4
+
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
 
       - name: Set up Gradle properties
         run: |
           mkdir -p ~/.gradle
           echo "org.gradle.jvmargs=-XX:MaxMetaspaceSize=5G" >> ~/.gradle/gradle.properties
-          echo -e "\nsigning.gnupg.keyName=BFAAD5D6093EF5E62BC9A16A10DB8C6B4AE61C2F" >> ~/.gradle/gradle.properties
+          echo -e "\nsigning.gnupg.keyName=${{ env.GPG_KEY_NAME }}" >> ~/.gradle/gradle.properties
           echo -e "\nsigning.gnupg.passphrase=${{ secrets.GPG_PASSWORD }}" >> ~/.gradle/gradle.properties
 
       - name: Set up git credentials
-        uses: oleksiyrudenko/gha-git-credentials@v2
+        uses: oleksiyrudenko/gha-git-credentials@8bb1fe6d543b2233ef1856cd3b0181f5abbd4d6a # v2.1.2
 
         with:
           global: true
@@ -39,10 +57,28 @@ jobs:
       - name: Gradle (Setup)
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+
+        with:
+          package_json_file: modules/web/web-core/web-frontend/package.json
+          run_install: false
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+
+        with:
+          node-version-file: modules/web/web-core/web-frontend/package.json
+          cache-dependency-path: modules/web/web-core/web-frontend/pnpm-lock.yaml
+          cache: 'pnpm'
+
       - name: Gradle (Build)
-        run: "./gradlew checkLicenses build"
+        run: "./gradlew checkLicenses build koverXmlReport sonar"
 
         env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
           TOKEN: "${{ secrets.TOKEN }}"
 
       - name: Gradle (Publish)
@@ -68,7 +104,7 @@ jobs:
         run: echo ::set-output name=NAME::${GITHUB_REF#refs/tags/}
 
       - name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@72f2c25fcb47643c292f7107632f7a47c1df5cd8 # v2.3.2
 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

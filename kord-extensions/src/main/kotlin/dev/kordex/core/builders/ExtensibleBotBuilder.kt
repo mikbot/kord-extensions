@@ -26,19 +26,16 @@ import dev.kord.gateway.builder.PresenceBuilder
 import dev.kord.gateway.builder.Shards
 import dev.kord.rest.builder.message.allowedMentions
 import dev.kord.rest.builder.message.create.MessageCreateBuilder
-import dev.kordex.core.DATA_COLLECTION
-import dev.kordex.core.DEV_MODE
-import dev.kordex.core.ExtensibleBot
-import dev.kordex.core.KORDEX_GIT_BRANCH
-import dev.kordex.core.KORDEX_GIT_HASH
-import dev.kordex.core.KORDEX_VERSION
-import dev.kordex.core.KORD_VERSION
+import dev.kordex.core.*
 import dev.kordex.core.annotations.BotBuilderDSL
 import dev.kordex.core.annotations.InternalAPI
+import dev.kordex.core.annotations.warnings.ReplacingDefaultErrorResponseBuilder
 import dev.kordex.core.commands.application.ApplicationCommandRegistry
 import dev.kordex.core.commands.chat.ChatCommandRegistry
 import dev.kordex.core.components.ComponentRegistry
 import dev.kordex.core.extensions.impl.AboutExtension
+import dev.kordex.core.healthcheck.HealthCheckRegistry
+import dev.kordex.core.healthcheck.HealthCheckState
 import dev.kordex.core.i18n.TranslationsProvider
 import dev.kordex.core.i18n.types.Key
 import dev.kordex.core.koin.KordExContext
@@ -53,6 +50,7 @@ import dev.kordex.core.utils.loadModule
 import dev.kordex.data.api.DataCollection
 import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.isActive
 import org.koin.core.annotation.KoinInternalApi
 import org.koin.core.logger.Level
 import org.koin.dsl.bind
@@ -61,6 +59,7 @@ import org.koin.fileProperties
 import org.koin.logger.slf4jLogger
 import java.io.File
 import java.util.*
+import kotlin.time.Duration.Companion.seconds
 
 internal typealias LocaleResolver = suspend (
 	guild: GuildBehavior?,
@@ -85,6 +84,20 @@ public open class ExtensibleBotBuilder {
 	/** Called to create an [ExtensibleBot], can be set to the constructor of your own subtype if needed. **/
 	public var constructor: (ExtensibleBotBuilder, String) -> ExtensibleBot = ::ExtensibleBot
 
+	/**
+	 * The number of threads to use for autocomplete event coroutines.
+	 *
+	 * Defaults to the available CPU cores, as returned by `Runtime.getRuntime().availableProcessors()`.
+	 */
+	public var autoCompleteContextThreads: Int = Runtime.getRuntime().availableProcessors()
+
+	/**
+	 * The number of threads to use for interaction event coroutines.
+	 *
+	 * Defaults to double the available CPU cores, as returned by `Runtime.getRuntime().availableProcessors()`.
+	 */
+	public var interactionContextThreads: Int = Runtime.getRuntime().availableProcessors() * 2
+
 	/** @suppress Builder that shouldn't be set directly by the user. **/
 	public val aboutBuilder: AboutBuilder = AboutBuilder()
 
@@ -107,6 +120,13 @@ public open class ExtensibleBotBuilder {
 
 		content = message.translate()
 	}
+
+	/** Whether to add KordEx's default health-checks. Defaults to `true`. **/
+	public var addDefaultHealthChecks: Boolean = true
+
+	/** The bot's version. Set this yourself manually or use the KordEx Gradle plugin. **/
+	@OptIn(InternalAPI::class)
+	public var botVersion: String? = BOT_VERSION
 
 	/**
 	 * Whether the bot is running in development mode.
@@ -147,7 +167,10 @@ public open class ExtensibleBotBuilder {
 	public var kordEventFilter: (suspend Event.() -> Boolean)? = null
 
 	/** @suppress Builder that shouldn't be set directly by the user. **/
-	public open val extensionsBuilder: ExtensionsBuilder = ExtensionsBuilder()
+	public var kordExEventFilter: (suspend Event.() -> Boolean)? = null
+
+	/** @suppress Builder that shouldn't be set directly by the user. **/
+	public open val extensionsBuilder: ExtensionsBuilder = ExtensionsBuilder(this)
 
 	/** @suppress Used for late execution of extensions builder calls, so plugins can be loaded first. **/
 	protected open val deferredExtensionsBuilders: MutableList<suspend ExtensionsBuilder.() -> Unit> =
@@ -205,11 +228,25 @@ public open class ExtensibleBotBuilder {
 	public var koinLogLevel: Level = Level.ERROR
 
 	/**
-	 * Set an event-filtering predicate, which may selectively prevent Kord events from being processed by returning
-	 * `false`.
+	 * Set an event-filtering predicate, which may selectively prevent Kord-created events from being processed by
+	 * returning `false`.
+	 *
+	 * This only filters events created by Kord.
+	 * For events submitted by Kord Extensions or loaded extensions, see [kordExEventFilter].
 	 */
-	public fun eventFilter(predicate: suspend Event.() -> Boolean) {
+	public fun kordEventFilter(predicate: suspend Event.() -> Boolean) {
 		kordEventFilter = predicate
+	}
+
+	/**
+	 * Set an event-filtering predicate, which may selectively prevent KordEx-created events from being processed by
+	 * returning `false`.
+	 *
+	 * This only filters events submitted by Kord Extensions or loaded extensions.
+	 * For events created by Kord, see [kordEventFilter].
+	 */
+	public fun kordExEventFilter(predicate: suspend Event.() -> Boolean) {
+		kordExEventFilter = predicate
 	}
 
 	/**
@@ -266,6 +303,7 @@ public open class ExtensibleBotBuilder {
 	 * and component body execution.
 	 */
 	@BotBuilderDSL
+	@ReplacingDefaultErrorResponseBuilder
 	public fun errorResponse(builder: FailureResponseBuilder) {
 		failureResponseBuilder = builder
 	}
@@ -457,6 +495,9 @@ public open class ExtensibleBotBuilder {
 	 * The modules provide important bot-related singletons.
 	 **/
 	private fun addBotKoinModules() {
+		val healthCheckRegistry = HealthCheckRegistry()
+
+		loadModule { single { healthCheckRegistry } bind HealthCheckRegistry::class }
 		loadModule { single { this@ExtensibleBotBuilder } bind ExtensibleBotBuilder::class }
 		loadModule { single { i18nBuilder.translationsProvider } bind TranslationsProvider::class }
 		loadModule { single { chatCommandsBuilder.registryBuilder() } bind ChatCommandRegistry::class }
@@ -479,16 +520,32 @@ public open class ExtensibleBotBuilder {
 				adapter
 			} bind SentryAdapter::class
 		}
+
+		if (addDefaultHealthChecks) {
+			addDefaultHealthChecks(healthCheckRegistry)
+		}
+	}
+
+	protected open fun addDefaultHealthChecks(registry: HealthCheckRegistry) {
+		registry.addAnonymous("kord.connected", 5.seconds) {
+			val kord = getKoin().get<Kord>()
+			val connected = kord.gateway.gateways.values.all { it.isActive }
+
+			if (lastState != HealthCheckState.Starting) {
+				unhealthyIf("Disconnected from Discord, given up on reconnecting") { !connected }
+			}
+
+			healthyIf { connected }
+		}
 	}
 
 	/** @suppress Plugin-loading function. **/
 	@Suppress("TooGenericExceptionCaught")
 	public open suspend fun loadPlugins() {
-		val manager = pluginBuilder.manager(pluginBuilder.pluginPaths)
+		val manager = pluginBuilder.manager(pluginBuilder.pluginPaths, pluginBuilder.enabled)
 
 		loadModule { single { manager } bind PluginManager::class }
 
-		manager.enabled = pluginBuilder.enabled
 		pluginBuilder.managerObj = manager
 
 		if (!manager.enabled) {
@@ -526,8 +583,48 @@ public open class ExtensibleBotBuilder {
 	/** @suppress Internal function used to build a bot instance. **/
 	public open suspend fun build(token: String): ExtensibleBot {
 		logger.info {
-			"Starting bot with Kord Extensions v$KORDEX_VERSION ($KORDEX_GIT_BRANCH@$KORDEX_GIT_HASH) " +
-				"and Kord v$KORD_VERSION"
+			buildString {
+				appendLine("Starting bot!")
+				appendLine("- Kord Extensions v$KORDEX_VERSION ($KORDEX_GIT_BRANCH@$KORDEX_GIT_HASH)")
+				appendLine("- Kord (Build Time) v$BUILD_KORD_VERSION")
+				appendLine("- Kord (Runtime) v$KORD_VERSION")
+			}
+		}
+
+		if (BUILD_KORD_VERSION != KORD_VERSION) {
+			logger.warn {
+				"This version of Kord Extensions was built against Kord v$BUILD_KORD_VERSION, but you seem to be " +
+					"using Kord v$KORD_VERSION instead. Please bear this in mind when reporting issues!"
+			}
+		}
+
+		if (devMode) {
+			logger.info {
+				"Running in development mode - enabling development helpers."
+			}
+
+			kord {
+				stackTraceRecovery = true
+			}
+
+			val envVarLength = System.getenv().maxOf { (key, _) -> key.length }
+			val propLength = System.getProperties().maxOf { (key, _) -> key.toString().length }
+
+			logger.info {
+				"=== ENVIRONMENTAL VARIABLES === \n" +
+					System.getenv()
+						.toSortedMap()
+						.map { (key, value) -> "${key.padEnd(envVarLength)} | $value" }
+						.joinToString("\n")
+			}
+
+			logger.info {
+				"=== SYSTEM PROPERTIES === \n" +
+					System.getProperties()
+						.toSortedMap { left, right -> left.toString().compareTo(right.toString()) }
+						.map { (key, value) -> "${key.toString().padEnd(propLength)} | $value" }
+						.joinToString("\n")
+			}
 		}
 
 		hooksBuilder.beforeKoinSetup {  // We have to do this super-duper early for safety

@@ -10,7 +10,6 @@ package dev.kordex.core.commands.converters.builders
 
 import dev.kordex.core.InvalidArgumentException
 import dev.kordex.core.commands.Arguments
-import dev.kordex.core.commands.CommandContext
 import dev.kordex.core.commands.converters.AutoCompleteCallback
 import dev.kordex.core.commands.converters.Converter
 import dev.kordex.core.commands.converters.Mutator
@@ -67,16 +66,6 @@ public abstract class ConverterBuilder<T> {
 				this,
 				"One of either a map of choices or an autocomplete callback may be provided, but both are present"
 			)
-		}
-	}
-
-	/** Validate that this builder's value is allowable. **/
-	public open suspend fun validateValue(commandContext: CommandContext, value: T) {
-		if (validator != null) {
-			val context = ValidationContext(value, commandContext)
-
-			validator?.invoke(context)
-			context.throwIfFailed()
 		}
 	}
 }

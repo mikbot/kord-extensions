@@ -12,8 +12,9 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 public data class Bundle(
-	val name: String
+	val name: String,
+	val formattingVersion: MessageFormatVersion = MessageFormatVersion.ONE,
 ) {
 	override fun toString(): String =
-		"Bundle \"$name\""
+		"Bundle $name/v${formattingVersion.version}"
 }
