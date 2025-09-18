@@ -98,7 +98,7 @@ public class DataCollector(public val level: DataCollection) : KordExKoinCompone
 		 * If you're maintaining a fork of Kord Extensions, add the name of your fork below.
 		 * Fork names should be lowered-kebab-case, ideally containing only lower-case letters, numbers, and dashes.
 		 */
-		val fork: String? = null  // "fork-name"
+		val fork: String = FORK_NAME
 
 		if (!::applicationInfo.isInitialized) {
 			applicationInfo = bot.kordRef.getApplicationInfo()
@@ -122,7 +122,6 @@ public class DataCollector(public val level: DataCollection) : KordExKoinCompone
 						modules = KORDEX_MODULES.associateWith {
 							KORDEX_VERSION
 						},
-						fork = FORK_NAME
 					)
 
 				is DataCollection.Standard ->
@@ -178,7 +177,6 @@ public class DataCollector(public val level: DataCollection) : KordExKoinCompone
 
 						jvmVersion = System.getProperty("java.version"),
 						kotlinVersion = KotlinVersion.CURRENT.toString(),
-						fork = FORK_NAME
 					)
 
 				is DataCollection.Extra -> {
@@ -249,7 +247,6 @@ public class DataCollector(public val level: DataCollection) : KordExKoinCompone
 							.toTypedArray(),
 						ramAvailable = hardware.memory.total,
 						threadCount = processor.logicalProcessorCount,
-						fork = FORK_NAME
 					)
 
 					if (applicationInfo.team != null) {

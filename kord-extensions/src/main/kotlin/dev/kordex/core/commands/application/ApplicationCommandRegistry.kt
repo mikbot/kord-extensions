@@ -363,7 +363,7 @@ public abstract class ApplicationCommandRegistry : KordExKoinComponent {
 	public open suspend fun createDiscordEntryPointCommand(command: PrimaryEntryPointCommand): Snowflake {
 		val locale = bot.settings.i18nBuilder.defaultLocale
 
-		val (name, nameLocalizations) = command.localizedName
+		val (name, nameLocalizations) = command.localisedName
 		val (description, descriptionLocalizations) = command.localizedDescription
 
 		val guild = if (command.guildId != null) {

@@ -28,10 +28,10 @@ import dev.kord.rest.builder.message.modify.MessageModifyBuilder
 import dev.kordex.core.DISCORD_BLURPLE
 import dev.kordex.core.koin.KordExKoinComponent
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.datetime.Clock
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.koin.core.component.inject
+import kotlin.time.Clock
 
 @Suppress("MagicNumber")
 @Serializable

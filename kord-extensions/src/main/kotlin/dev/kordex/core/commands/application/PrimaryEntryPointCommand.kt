@@ -24,7 +24,7 @@ public open class PrimaryEntryPointCommand(extension: Extension) : ApplicationCo
 	/**
 	 * A [Localized] version of [description].
 	 */
-	public val localizedDescription: Localized<String> by lazy { localize(description) }
+	public val localizedDescription: Localised<String> by lazy { localise(description) }
 
 	override val type: ApplicationCommandType = ApplicationCommandType.PrimaryEntryPoint
 

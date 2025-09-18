@@ -55,8 +55,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.datetime.Clock
-import kotlin.text.split
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 
 const val NEGATIVE_EMOTE = "❌"
